@@ -1,482 +1,358 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Time Tracker</title>
-    <style>
-        :root {
-            --bg-color: #1e1e1e;
-            --sidebar-bg: #252526;
-            --card-bg: #2d2d2d;
-            --accent-color: #007aff;
-            --accent-hover: #0056b3;
-            --text-primary: #ffffff;
-            --text-secondary: #aaaaaa;
-            --border-color: #3e3e42;
-            --danger-color: #ff3b30;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TimeTracker — macOS Style</title>
+  <style>
+    :root {
+      --bg-main: #1e1e1e;
+      --bg-sidebar: #252526;
+      --bg-card: #2d2d2d;
+      --accent-blue: #0a84ff;
+      --text-main: #ffffff;
+      --text-secondary: #8e8e93;
+      --border-color: #38383a;
+    }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-primary);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
 
-        /* PIN Modal */
-        .pin-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background-color: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+    }
 
-        .pin-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            padding: 32px;
-            border-radius: 16px;
-            text-align: center;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-            width: 320px;
-        }
+    .sidebar-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
 
-        .pin-card h2 {
-            font-size: 20px;
-            margin-bottom: 8px;
-        }
+    .project-list {
+      list-style: none;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
 
-        .pin-card p {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 20px;
-        }
+    .project-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      font-size: 14px;
+      color: var(--text-main);
+      transition: background 0.15s ease;
+    }
 
-        .pin-input {
-            width: 100%;
-            padding: 12px;
-            font-size: 24px;
-            letter-spacing: 8px;
-            text-align: center;
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            border-radius: 8px;
-            margin-bottom: 16px;
-            outline: none;
-        }
+    .project-item:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
 
-        .pin-btn {
-            width: 100%;
-            padding: 12px;
-            background: var(--accent-color);
-            border: none;
-            color: white;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 15px;
-            transition: background 0.2s;
-        }
+    .project-item.active {
+      background-color: var(--accent-blue);
+    }
 
-        .pin-btn:hover {
-            background: var(--accent-hover);
-        }
+    .add-project-btn {
+      background: transparent;
+      border: 1px dashed var(--border-color);
+      color: var(--text-secondary);
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
 
-        .pin-error {
-            color: var(--danger-color);
-            font-size: 12px;
-            margin-top: 10px;
-            display: none;
-        }
+    .add-project-btn:hover {
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
 
-        /* Main Layout */
-        .sidebar {
-            width: 260px;
-            background-color: var(--sidebar-bg);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            padding: 16px;
-        }
+    /* Main Area */
+    .main-content {
+      flex-grow: 1;
+      padding: 32px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
 
-        .app-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 16px;
-            padding-left: 8px;
-        }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 16px;
+    }
 
-        .project-list {
-            list-style: none;
-            flex: 1;
-            overflow-y: auto;
-        }
+    .project-header-title {
+      font-size: 28px;
+      font-weight: 700;
+    }
 
-        .project-item {
-            display: flex;
-            align-items: center;
-            padding: 10px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-bottom: 4px;
-            font-size: 14px;
-            color: var(--text-secondary);
-            transition: all 0.15s ease;
-        }
+    .user-selector {
+      display: flex;
+      background: var(--bg-card);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
 
-        .project-item:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-            color: var(--text-primary);
-        }
+    .user-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 6px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 13px;
+    }
 
-        .project-item.active {
-            background-color: var(--accent-color);
-            color: white;
-            font-weight: 500;
-        }
+    .user-btn.active {
+      background: var(--accent-blue);
+      color: #fff;
+    }
 
-        .project-icon {
-            margin-right: 10px;
-            font-size: 16px;
-        }
+    /* Tracking Panel */
+    .tracking-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+    }
 
-        .add-project-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px;
-            background: transparent;
-            border: 1px dashed var(--border-color);
-            color: var(--text-secondary);
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.2s;
-        }
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+    }
 
-        .add-project-btn:hover {
-            border-color: var(--accent-color);
-            color: var(--accent-color);
-        }
+    .hours-grid {
+      display: flex;
+      gap: 12px;
+    }
 
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 32px 40px;
-            overflow-y: auto;
-        }
+    .hour-btn {
+      flex: 1;
+      height: 48px;
+      background: var(--bg-sidebar);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
 
-        .project-header {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 24px;
-        }
+    .hour-btn:hover {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+    }
 
-        .section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+    /* Log Table */
+    .log-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      flex-grow: 1;
+    }
 
-        .member-picker {
-            display: flex;
-            background-color: var(--sidebar-bg);
-            padding: 4px;
-            border-radius: 8px;
-            width: fit-content;
-            border: 1px solid var(--border-color);
-            margin-bottom: 28px;
-        }
+    .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
 
-        .member-opt {
-            padding: 6px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-            color: var(--text-secondary);
-            transition: all 0.2s;
-        }
+    .log-table th {
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+      font-weight: 500;
+    }
 
-        .member-opt.active {
-            background-color: var(--card-bg);
-            color: var(--text-primary);
-            font-weight: 600;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
+    .log-table td {
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
 
-        .hours-grid {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 36px;
-        }
+  <!-- Подключение Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        .hour-btn {
-            width: 52px;
-            height: 52px;
-            border-radius: 12px;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    const firebaseConfig = {
+      apiKey: "AIzaSyAM2qeybqi7VnFXqY0Rq-9FB076b7aF4OI",
+      authDomain: "tracker-66e2f.firebaseapp.com",
+      projectId: "tracker-66e2f",
+      storageBucket: "tracker-66e2f.firebasestorage.app",
+      messagingSenderId: "158996103708",
+      appId: "1:158996103708:web:ccdd3261cdd606bc0bd5d9",
+      measurementId: "G-W1GZGDV8H4"
+    };
 
-        .hour-btn:hover {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
-        }
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-        .divider {
-            height: 1px;
-            background-color: var(--border-color);
-            margin-bottom: 28px;
-        }
+    let activeProject = "KNESS APP";
+    let currentUser = "Микола";
 
-        .log-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+    // Функция обновления списка проектов
+    window.selectProject = (projectName) => {
+      activeProject = projectName;
+      document.getElementById("current-project-title").innerText = projectName;
+      document.querySelectorAll(".project-item").forEach(el => {
+        el.classList.toggle("active", el.innerText.includes(projectName));
+      });
+      loadLogs();
+    };
 
-        .log-table th {
-            text-align: left;
-            padding: 12px;
-            font-size: 12px;
-            color: var(--text-secondary);
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 500;
-        }
+    window.selectUser = (userName) => {
+      currentUser = userName;
+      document.querySelectorAll(".user-btn").forEach(el => {
+        el.classList.toggle("active", el.innerText === userName);
+      });
+    };
 
-        .log-table td {
-            padding: 14px 12px;
-            font-size: 14px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
+    window.addHours = async (hours) => {
+      try {
+        await addDoc(collection(db, "time_entries"), {
+          project: activeProject,
+          user: currentUser,
+          hours: hours,
+          date: new Date().toLocaleDateString("uk-UA")
+        });
+      } catch (e) {
+        console.error("Ошибка сохранения: ", e);
+      }
+    };
 
-        .empty-state {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-top: 40px;
-            text-align: center;
+    window.addNewProject = async () => {
+      const name = prompt("Введіть назву нового проєкту:");
+      if (name) {
+        await addDoc(collection(db, "projects"), { name: name });
+      }
+    };
+
+    // Слушатель событий базы в реальном времени
+    onSnapshot(collection(db, "projects"), (snapshot) => {
+      const list = document.getElementById("project-list");
+      list.innerHTML = `<li class="project-item active" onclick="selectProject('KNESS APP')">📁 KNESS APP</li>`;
+      snapshot.forEach((doc) => {
+        const p = doc.data();
+        if (p.name !== "KNESS APP") {
+          list.innerHTML += `<li class="project-item" onclick="selectProject('${p.name}')">📁 ${p.name}</li>`;
         }
-    </style>
+      });
+    });
+
+    function loadLogs() {
+      onSnapshot(collection(db, "time_entries"), (snapshot) => {
+        const tableBody = document.getElementById("log-table-body");
+        tableBody.innerHTML = "";
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.project === activeProject) {
+            tableBody.innerHTML += `
+              <tr>
+                <td><b>${data.user}</b></td>
+                <td>${data.hours} год.</td>
+                <td>${data.date}</td>
+              </tr>
+            `;
+          }
+        });
+      });
+    }
+
+    loadLogs();
+  </script>
 </head>
 <body>
 
-    <!-- PIN Protection Modal -->
-    <div class="pin-overlay" id="pinOverlay">
-        <div class="pin-card">
-            <h2>Time Tracker</h2>
-            <p>Введіть ПІН-код для доступу</p>
-            <input type="password" id="pinInput" class="pin-input" maxlength="4" placeholder="••••" autofocus>
-            <button class="pin-btn" onclick="checkPin()">Увійти</button>
-            <div class="pin-error" id="pinError">Невірний ПІН-код</div>
-        </div>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-title">Проєкти</div>
+    <ul class="project-list" id="project-list">
+      <li class="project-item active" onclick="selectProject('KNESS APP')">📁 KNESS APP</li>
+    </ul>
+    <button class="add-project-btn" onclick="addNewProject()">+ Додати проєкт</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="header">
+      <h1 class="project-header-title" id="current-project-title">KNESS APP</h1>
+      
+      <!-- User Switcher -->
+      <div class="user-selector">
+        <button class="user-btn active" onclick="selectUser('Микола')">Микола</button>
+        <button class="user-btn" onclick="selectUser('Марго')">Марго</button>
+        <button class="user-btn" onclick="selectUser('Даша')">Даша</button>
+      </div>
     </div>
 
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="app-title">Проєкти</div>
-        <ul class="project-list" id="projectList"></ul>
-        <button class="add-project-btn" onclick="addNewProject()">+ Новий проєкт</button>
+    <!-- Tracking Section -->
+    <div class="tracking-section">
+      <div class="section-title">Зафіксувати години за сьогодні:</div>
+      <div class="hours-grid">
+        <button class="hour-btn" onclick="addHours(1)">1</button>
+        <button class="hour-btn" onclick="addHours(2)">2</button>
+        <button class="hour-btn" onclick="addHours(3)">3</button>
+        <button class="hour-btn" onclick="addHours(4)">4</button>
+        <button class="hour-btn" onclick="addHours(5)">5</button>
+        <button class="hour-btn" onclick="addHours(6)">6</button>
+        <button class="hour-btn" onclick="addHours(7)">7</button>
+        <button class="hour-btn" onclick="addHours(8)">8</button>
+      </div>
     </div>
 
-    <!-- Main View -->
-    <div class="main-content">
-        <div id="activeView" style="display: none;">
-            <div class="project-header" id="projectTitle">KNESS APP</div>
-
-            <div class="section-title">Учасник</div>
-            <div class="member-picker" id="memberPicker">
-                <div class="member-opt active" onclick="selectMember('Учасник 1', this)">Учасник 1</div>
-                <div class="member-opt" onclick="selectMember('Учасник 2', this)">Учасник 2</div>
-                <div class="member-opt" onclick="selectMember('Учасник 3', this)">Учасник 3</div>
-            </div>
-
-            <div class="section-title">Зафіксувати години за сьогодні</div>
-            <div class="hours-grid">
-                <button class="hour-btn" onclick="logHours(1)">1</button>
-                <button class="hour-btn" onclick="logHours(2)">2</button>
-                <button class="hour-btn" onclick="logHours(3)">3</button>
-                <button class="hour-btn" onclick="logHours(4)">4</button>
-                <button class="hour-btn" onclick="logHours(5)">5</button>
-                <button class="hour-btn" onclick="logHours(6)">6</button>
-                <button class="hour-btn" onclick="logHours(7)">7</button>
-                <button class="hour-btn" onclick="logHours(8)">8</button>
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="section-title">Лог часу</div>
-            <table class="log-table">
-                <thead>
-                    <tr>
-                        <th>Учасник</th>
-                        <th>Години</th>
-                        <th>Дата</th>
-                    </tr>
-                </thead>
-                <tbody id="logTableBody"></tbody>
-            </table>
-        </div>
-
-        <div id="emptyView" class="empty-state">
-            Виберіть проєкт з бокової панелі ліворуч
-        </div>
+    <!-- Log Section -->
+    <div class="log-section">
+      <div class="section-title">Журнал зафіксованого часу</div>
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Учасник</th>
+            <th>Години</th>
+            <th>Дата</th>
+          </tr>
+        </thead>
+        <tbody id="log-table-body">
+          <!-- Динамически загружаемые данные -->
+        </tbody>
+      </table>
     </div>
+  </div>
 
-    <script>
-        const CORRECT_PIN = "0102";
-        let currentMember = "Учасник 1";
-        let activeProjectId = null;
-
-        let projects = JSON.parse(localStorage.getItem('tt_projects')) || [
-            { id: '1', name: 'KNESS APP', entries: [] },
-            { id: '2', name: 'Solar Dashboard', entries: [] }
-        ];
-
-        // Check PIN
-        function checkPin() {
-            const input = document.getElementById('pinInput').value;
-            if (input === CORRECT_PIN) {
-                document.getElementById('pinOverlay').style.display = 'none';
-                sessionStorage.setItem('tt_auth', 'true');
-            } else {
-                document.getElementById('pinError').style.display = 'block';
-                document.getElementById('pinInput').value = '';
-            }
-        }
-
-        document.getElementById('pinInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                checkPin();
-            }
-        });
-
-        if (sessionStorage.getItem('tt_auth') === 'true') {
-            document.getElementById('pinOverlay').style.display = 'none';
-        }
-
-        function saveToStorage() {
-            localStorage.setItem('tt_projects', JSON.stringify(projects));
-        }
-
-        function renderProjects() {
-            const list = document.getElementById('projectList');
-            list.innerHTML = '';
-            projects.forEach(p => {
-                const li = document.createElement('li');
-                li.className = `project-item ${p.id === activeProjectId ? 'active' : ''}`;
-                li.onclick = () => selectProject(p.id);
-                li.innerHTML = `<span class="project-icon">📁</span> ${p.name}`;
-                list.appendChild(li);
-            });
-        }
-
-        function selectProject(id) {
-            activeProjectId = id;
-            renderProjects();
-            const project = projects.find(p => p.id === id);
-            
-            if (project) {
-                document.getElementById('projectTitle').innerText = project.name;
-                document.getElementById('activeView').style.display = 'block';
-                document.getElementById('emptyView').style.display = 'none';
-                renderLogs();
-            }
-        }
-
-        function selectMember(member, el) {
-            currentMember = member;
-            document.querySelectorAll('.member-opt').forEach(opt => opt.classList.remove('active'));
-            el.classList.add('active');
-        }
-
-        function logHours(hours) {
-            if (!activeProjectId) return;
-            const project = projects.find(p => p.id === activeProjectId);
-            if (project) {
-                const newEntry = {
-                    id: Date.now().toString(),
-                    member: currentMember,
-                    hours: hours,
-                    date: new Date().toLocaleDateString('uk-UA')
-                };
-                project.entries.unshift(newEntry);
-                saveToStorage();
-                renderLogs();
-            }
-        }
-
-        function renderLogs() {
-            const tbody = document.getElementById('logTableBody');
-            tbody.innerHTML = '';
-            const project = projects.find(p => p.id === activeProjectId);
-            
-            if (project && project.entries.length > 0) {
-                project.entries.forEach(e => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><strong>${e.member}</strong></td>
-                        <td>${e.hours} год</td>
-                        <td style="color: var(--text-secondary);">${e.date}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } else {
-                tbody.innerHTML = '<tr><td colspan="3" style="color: var(--text-secondary); text-align: center; padding: 20px;">Записів поки немає</td></tr>';
-            }
-        }
-
-        function addNewProject() {
-            const name = prompt('Введіть назву нового проєкту:');
-            if (name && name.trim()) {
-                const newProj = {
-                    id: Date.now().toString(),
-                    name: name.trim(),
-                    entries: []
-                };
-                projects.push(newProj);
-                saveToStorage();
-                selectProject(newProj.id);
-            }
-        }
-
-        renderProjects();
-        if (projects.length > 0) {
-            selectProject(projects[0].id);
-        }
-    </script>
 </body>
 </html>
