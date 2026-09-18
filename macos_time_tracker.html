@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="uk" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TimeTracker macOS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            macWindow: '#1e1e1e',
+            macSidebar: 'rgba(38, 38, 41, 0.75)',
+            macContent: '#121214',
+            macCard: '#252529',
+            macBorder: 'rgba(255, 255, 255, 0.1)',
+            macAccent: '#0a84ff',
+            macAccentHover: '#0071e3',
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', '"Helvetica Neue"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar styling for macOS look */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.35);
+    }
+    .backdrop-blur-mac {
+      backdrop-filter: blur(25px) saturate(180%);
+      -webkit-backdrop-filter: blur(25px) saturate(180%);
+    }
+  </style>
+</head>
+<body class="bg-black text-gray-100 font-sans antialiased h-screen w-screen overflow-hidden flex items-center justify-center p-2 sm:p-4 md:p-6 select-none">
+
+  <div class="w-full h-full max-w-6xl max-h-[900px] bg-macWindow rounded-2xl border border-macBorder shadow-2xl flex flex-col overflow-hidden relative">
+    
+    <!-- Window Title Bar -->
+    <div class="h-10 bg-macWindow/90 border-b border-macBorder/80 flex items-center justify-between px-4 z-20 backdrop-blur-mac shrink-0">
+      <!-- Traffic Lights Controls -->
+      <div class="flex items-center space-x-2">
+        <div class="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] cursor-pointer hover:opacity-80 transition-opacity"></div>
+        <div class="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] cursor-pointer hover:opacity-80 transition-opacity"></div>
+        <div class="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] cursor-pointer hover:opacity-80 transition-opacity"></div>
+      </div>
+
+      <!-- App Title -->
+      <div class="text-xs font-semibold text-gray-400 flex items-center space-x-2">
+        <i class="fa-regular fa-clock text-macAccent"></i>
+        <span>TimeTracker — macOS Web Edition</span>
+      </div>
+
+      <!-- Spacer for symmetry -->
+      <div class="w-12"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="flex-1 flex overflow-hidden">
+
+      <!-- Sidebar -->
+      <aside class="w-60 md:w-64 bg-macSidebar border-r border-macBorder backdrop-blur-mac flex flex-col shrink-0">
+        <!-- Sidebar Header -->
+        <div class="p-3 border-b border-macBorder/50 flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Проєкти</span>
+          <button onclick="openAddProjectModal()" class="text-xs text-macAccent hover:text-white bg-macAccent/10 hover:bg-macAccent px-2 py-1 rounded-md transition-all flex items-center gap-1">
+            <i class="fa-solid fa-plus"></i> Новий
+          </button>
+        </div>
+
+        <!-- Projects List -->
+        <div id="projects-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+          <!-- Dynamically Rendered Projects -->
+        </div>
+
+        <!-- Team Status Quick Overview (Bottom Sidebar) -->
+        <div class="p-3 border-t border-macBorder/50 bg-black/20 text-xs">
+          <div class="text-gray-400 font-medium mb-2">Команда</div>
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-gray-300">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Микола (Team Lead)</span>
+              <span id="lead-hours-badge" class="bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded text-[10px]">0 год</span>
+            </div>
+            <div class="flex items-center justify-between text-gray-300">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Марго</span>
+              <span id="margo-hours-badge" class="bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded text-[10px]">0 год</span>
+            </div>
+            <div class="flex items-center justify-between text-gray-300">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Даша</span>
+              <span id="dasha-hours-badge" class="bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded text-[10px]">0 год</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="flex-1 bg-macContent flex flex-col overflow-hidden relative">
+        
+        <!-- Top Toolbar / User Selector -->
+        <div class="p-4 border-b border-macBorder flex flex-wrap items-center justify-between gap-4 bg-macWindow/40 backdrop-blur-mac">
+          <div>
+            <h1 id="active-project-title" class="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-folder-open text-macAccent"></i>
+              <span>KNESS APP</span>
+            </h1>
+            <p class="text-xs text-gray-400 mt-0.5">Оберіть час за робочий день для обраного проєкту</p>
+          </div>
+
+          <!-- User Segmented Control (Apple Pill Selector) -->
+          <div class="bg-gray-900/80 p-1 rounded-xl border border-macBorder flex items-center space-x-1">
+            <span class="text-xs text-gray-400 px-2 font-medium">Учасник:</span>
+            <button onclick="setCurrentUser('Микола')" id="user-btn-Микола" class="user-tab-btn px-3 py-1 rounded-lg text-xs font-medium transition-all bg-macAccent text-white shadow-sm">
+              Микола
+            </button>
+            <button onclick="setCurrentUser('Марго')" id="user-btn-Марго" class="user-tab-btn px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all">
+              Марго
+            </button>
+            <button onclick="setCurrentUser('Даша')" id="user-btn-Даша" class="user-tab-btn px-3 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all">
+              Даша
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Work Area -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+
+          <!-- Time Input Card -->
+          <div class="bg-macCard border border-macBorder rounded-2xl p-4 md:p-5 shadow-lg">
+            <div class="flex items-center justify-between mb-3">
+              <div class="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                <i class="fa-regular fa-calendar-check text-macAccent"></i>
+                <span>Затрекати години за сьогодні (<span id="today-date-str"></span>):</span>
+              </div>
+              <span class="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded-lg border border-macBorder/50">
+                Поточний користувач: <strong id="current-user-label" class="text-macAccent">Микола</strong>
+              </span>
+            </div>
+
+            <!-- Hour Selector Buttons (1 to 8) -->
+            <div class="grid grid-cols-4 sm:grid-cols-8 gap-2.5 pt-1">
+              <button onclick="logHours(1)" class="h-12 rounded-xl bg-macAccent/10 hover:bg-macAccent text-macAccent hover:text-white font-bold text-lg border border-macAccent/20 hover:border-transparent transition-all flex flex-col items-center justify-center active:scale-95 shadow-sm">
+                1 <span class="text-[9px] font-normal opacity-80">год</span>
+              </button>
+              <button onclick="logHours(2)" class="h-12 rounded-xl bg-macAccent/10 hover:bg-macAccent text-macAccent hover:text-white font-bold text-lg border border-macAccent/20 hover:border-transparent transition-all flex flex-col items-center justify-center active:scale-95 shadow-sm">
+                2 <span class="text-[9px] font-normal opacity-80">год</span>
+              </button>
+              <button onclick="logHours(3)" class="h-12 rounded-xl bg-macAccent/10 hover:bg-macAccent text-macAccent hover:text-white font-bold text-lg border border-macAccent/20 hover:border-transparent transition-all flex flex-col items-center justify-center active:scale-95 shadow-sm">
+                3 <span class="text-[9px] font-normal opacity-80">год</span>
+              </button>
+              <button onclick="logHours(4)" class="h-12 rounded-xl bg-macAccent/10 hover:bg-macAccent text-macAccent hover:text-white font-bold text-lg border border-macAccent/20 hover:border-transparent transition-all flex flex-col items-center justify-center active:scale-95 shadow-sm">
+                4 <span class="text-[9px] font-normal opacity-80">год</span>
+              </button>
+              <button onclick="logHours(5)" class="h-12 rounded-xl bg-macAccent/10 hover:bg-macAccent text-macAccent hover:text-white font-bold text-lg border border-macAccent/20 hover:border-transparent transition-all flex flex-col items-center justify-center active:scale-95 shadow-sm">
+                5 <span class="text-[9px] font-normal opacity-80">год</span>
+              </button>
+              <button onclick="logHours(6)" class="h-12 rounded-xl bg-macAccent/10 hover:bg-macAccent text-macAccent hover:text-white font-bold text-lg border border-macAccent/20 hover:border-transparent transition-all flex flex-col items-center justify-center active:scale-95 shadow-sm">
+                6 <span class="text-[9px] font-normal opacity-80">год</span>
+              </button>
+              <button onclick="logHours(7)" class="h-12 rounded-xl bg-macAccent/10 hover:bg-macAccent text-macAccent hover:text-white font-bold text-lg border border-macAccent/20 hover:border-transparent transition-all flex flex-col items-center justify-center active:scale-95 shadow-sm">
+                7 <span class="text-[9px] font-normal opacity-80">год</span>
+              </button>
+              <button onclick="logHours(8)" class="h-12 rounded-xl bg-macAccent/10 hover:bg-macAccent text-macAccent hover:text-white font-bold text-lg border border-macAccent/20 hover:border-transparent transition-all flex flex-col items-center justify-center active:scale-95 shadow-sm">
+                8 <span class="text-[9px] font-normal opacity-80">год</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Aggregated Summary Stats for Project Manager -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-macCard border border-macBorder rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <div class="text-xs text-gray-400 font-medium">Всього по проєкту</div>
+                <div id="stat-total-project-hours" class="text-2xl font-bold text-white mt-1">0 год</div>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center text-lg">
+                <i class="fa-solid fa-chart-pie"></i>
+              </div>
+            </div>
+
+            <div class="bg-macCard border border-macBorder rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <div class="text-xs text-gray-400 font-medium">Активних записів</div>
+                <div id="stat-entry-count" class="text-2xl font-bold text-white mt-1">0</div>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">
+                <i class="fa-solid fa-list-check"></i>
+              </div>
+            </div>
+
+            <div class="bg-macCard border border-macBorder rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <div class="text-xs text-gray-400 font-medium">Найактивніший дизайн-спринт</div>
+                <div id="stat-top-contributor" class="text-sm font-bold text-white mt-1">—</div>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center text-lg">
+                <i class="fa-solid fa-user-astronaut"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Log History Section -->
+          <div class="bg-macCard border border-macBorder rounded-2xl p-4 md:p-5 shadow-lg space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                <i class="fa-solid fa-list-ul text-macAccent"></i>
+                <span>Лог часу проєкту</span>
+              </div>
+
+              <!-- Filter options -->
+              <div class="flex items-center gap-2 text-xs">
+                <span class="text-gray-400 hidden sm:inline">Фільтр:</span>
+                <select id="user-filter" onchange="renderLogs()" class="bg-gray-900 text-gray-300 border border-macBorder rounded-lg px-2.5 py-1 outline-none focus:border-macAccent">
+                  <option value="ALL">Всі учасники</option>
+                  <option value="Микола">Тільки Микола</option>
+                  <option value="Марго">Тільки Марго</option>
+                  <option value="Даша">Тільки Даша</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto rounded-xl border border-macBorder/60 bg-black/30">
+              <table class="w-full text-left text-xs text-gray-300">
+                <thead class="bg-macWindow/80 text-gray-400 uppercase tracking-wider text-[10px] border-b border-macBorder">
+                  <tr>
+                    <th class="py-3 px-4">Учасник</th>
+                    <th class="py-3 px-4">Затрекано годин</th>
+                    <th class="py-3 px-4">Дата запису</th>
+                    <th class="py-3 px-4 text-right">Дії</th>
+                  </tr>
+                </thead>
+                <tbody id="logs-table-body" class="divide-y divide-macBorder/40">
+                  <!-- Dynamic Rows -->
+                </tbody>
+              </table>
+              
+              <!-- Empty state -->
+              <div id="empty-state" class="p-8 text-center text-gray-500 text-xs hidden">
+                <i class="fa-regular fa-folder-open text-2xl mb-2 text-gray-600 block"></i>
+                Поки що немає зафіксованих годин по цьому проєкту. Натисніть кнопку від 1 до 8 вище.
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer / Global Reset -->
+        <div class="p-3 bg-macWindow/80 border-t border-macBorder flex items-center justify-between text-xs text-gray-400">
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Локальна база даних активна (збереження в браузері)
+          </span>
+          <button onclick="clearAllData()" class="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
+            <i class="fa-solid fa-trash-can text-[11px]"></i> Скинути всі дані
+          </button>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal: Add New Project Folder -->
+  <div id="add-project-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-macWindow border border-macBorder w-full max-w-md rounded-2xl shadow-2xl p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-macBorder pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-folder-plus text-macAccent"></i> Створити нову папку проєкту
+        </h3>
+        <button onclick="closeAddProjectModal()" class="text-gray-400 hover:text-white text-xs">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <label class="text-xs text-gray-300 font-medium">Назва проєкту:</label>
+        <input type="text" id="new-project-name" placeholder="наприклад, KNESS App Redesign" class="w-full bg-macContent border border-macBorder rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-macAccent">
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="closeAddProjectModal()" class="px-3 py-1.5 rounded-xl border border-macBorder text-xs text-gray-300 hover:bg-gray-800 transition-all">
+          Скасувати
+        </button>
+        <button onclick="saveNewProject()" class="px-4 py-1.5 rounded-xl bg-macAccent text-white text-xs font-semibold hover:bg-macAccentHover transition-all shadow-md">
+          Створити
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-macCard border border-macAccent/40 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs flex items-center space-x-2 transition-all opacity-0 translate-y-4 pointer-events-none z-50">
+    <i id="toast-icon" class="fa-solid fa-circle-check text-macAccent text-sm"></i>
+    <span id="toast-message">Повідомлення</span>
+  </div>
+
+  <script>
+    // Initial Application State
+    const DEFAULT_PROJECTS = [
+      { id: 'proj-1', name: 'KNESS APP' },
+      { id: 'proj-2', name: 'Solar & BESS Dashboard' },
+      { id: 'proj-3', name: 'UI Design System' }
+    ];
+
+    let projects = JSON.parse(localStorage.getItem('mac_tracker_projects')) || DEFAULT_PROJECTS;
+    let logs = JSON.parse(localStorage.getItem('mac_tracker_logs')) || [
+      { id: 'log-1', projectId: 'proj-1', person: 'Микола', hours: 8, date: '18.09.2026' },
+      { id: 'log-2', projectId: 'proj-1', person: 'Марго', hours: 7, date: '18.09.2026' },
+      { id: 'log-3', projectId: 'proj-1', person: 'Даша', hours: 6, date: '18.09.2026' }
+    ];
+
+    let activeProjectId = projects[0]?.id || 'proj-1';
+    let currentUser = 'Микола';
+
+    window.onload = function() {
+      // Set date string
+      const today = new Date();
+      const formattedDate = `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}`;
+      document.getElementById('today-date-str').textContent = formattedDate;
+
+      renderProjects();
+      renderLogs();
+      updateTeamOverview();
+    };
+
+    // Save Data to localStorage
+    function saveData() {
+      localStorage.setItem('mac_tracker_projects', JSON.stringify(projects));
+      localStorage.setItem('mac_tracker_logs', JSON.stringify(logs));
+      updateTeamOverview();
+    }
+
+    // Set Current User
+    function setCurrentUser(userName) {
+      currentUser = userName;
+      document.getElementById('current-user-label').textContent = userName;
+
+      // Update button visual state
+      document.querySelectorAll('.user-tab-btn').forEach(btn => {
+        btn.classList.remove('bg-macAccent', 'text-white', 'shadow-sm');
+        btn.classList.add('text-gray-400');
+      });
+
+      const activeBtn = document.getElementById(`user-btn-${userName}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-macAccent', 'text-white', 'shadow-sm');
+        activeBtn.classList.remove('text-gray-400');
+      }
+    }
+
+    // Render Sidebar Projects
+    function renderProjects() {
+      const container = document.getElementById('projects-list');
+      container.innerHTML = '';
+
+      projects.forEach(project => {
+        const isActive = project.id === activeProjectId;
+        const btn = document.createElement('button');
+        btn.onclick = () => selectProject(project.id);
+        btn.className = `w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center justify-between group ${
+          isActive 
+            ? 'bg-macAccent text-white shadow-md' 
+            : 'text-gray-300 hover:bg-white/5 hover:text-white'
+        }`;
+
+        btn.innerHTML = `
+          <div class="flex items-center gap-2.5 truncate">
+            <i class="fa-solid fa-folder ${isActive ? 'text-white' : 'text-macAccent'}"></i>
+            <span class="truncate">${escapeHtml(project.name)}</span>
+          </div>
+          ${projects.length > 1 ? `
+            <i onclick="event.stopPropagation(); deleteProject('${project.id}')" class="fa-solid fa-trash-can opacity-0 group-hover:opacity-100 hover:text-red-300 p-1 text-[10px] transition-opacity"></i>
+          ` : ''}
+        `;
+
+        container.appendChild(btn);
+      });
+
+      const activeProj = projects.find(p => p.id === activeProjectId);
+      if (activeProj) {
+        document.getElementById('active-project-title').querySelector('span').textContent = activeProj.name;
+      }
+    }
+
+    // Select Project
+    function selectProject(id) {
+      activeProjectId = id;
+      renderProjects();
+      renderLogs();
+    }
+
+    // Log Hours (1-8)
+    function logHours(hours) {
+      const activeProj = projects.find(p => p.id === activeProjectId);
+      if (!activeProj) return;
+
+      const today = new Date();
+      const dateStr = `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}`;
+
+      const newLog = {
+        id: 'log-' + Date.now(),
+        projectId: activeProjectId,
+        person: currentUser,
+        hours: hours,
+        date: dateStr
+      };
+
+      logs.unshift(newLog);
+      saveData();
+      renderLogs();
+      showToast(`Зафіксовано ${hours} год для ${currentUser} в проєкті "${activeProj.name}"`);
+    }
+
+    // Render Logs Table and Stats
+    function renderLogs() {
+      const tableBody = document.getElementById('logs-table-body');
+      const emptyState = document.getElementById('empty-state');
+      const filterValue = document.getElementById('user-filter').value;
+
+      tableBody.innerHTML = '';
+
+      // Filter logs for active project
+      let projectLogs = logs.filter(l => l.projectId === activeProjectId);
+
+      // Apply User Filter
+      if (filterValue !== 'ALL') {
+        projectLogs = projectLogs.filter(l => l.person === filterValue);
+      }
+
+      if (projectLogs.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+
+        projectLogs.forEach(log => {
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-white/5 transition-colors';
+
+          row.innerHTML = `
+            <td class="py-3 px-4 font-medium text-white flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-macAccent/20 text-macAccent text-[10px] font-bold flex items-center justify-center">
+                ${log.person.charAt(0)}
+              </span>
+              ${escapeHtml(log.person)}
+            </td>
+            <td class="py-3 px-4 font-semibold text-macAccent">
+              ${log.hours} год
+            </td>
+            <td class="py-3 px-4 text-gray-400">
+              ${log.date}
+            </td>
+            <td class="py-3 px-4 text-right">
+              <button onclick="deleteLog('${log.id}')" class="text-gray-500 hover:text-red-400 p-1 transition-colors">
+                <i class="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </td>
+          `;
+
+          tableBody.appendChild(row);
+        });
+      }
+
+      // Update Aggregated Stats
+      const allProjectLogs = logs.filter(l => l.projectId === activeProjectId);
+      const totalHours = allProjectLogs.reduce((acc, curr) => acc + curr.hours, 0);
+      document.getElementById('stat-total-project-hours').textContent = `${totalHours} год`;
+      document.getElementById('stat-entry-count').textContent = allProjectLogs.length;
+
+      // Find top contributor
+      const totalsByPerson = {};
+      allProjectLogs.forEach(l => {
+        totalsByPerson[l.person] = (totalsByPerson[l.person] || 0) + l.hours;
+      });
+
+      let topPerson = '—';
+      let maxH = 0;
+      Object.keys(totalsByPerson).forEach(person => {
+        if (totalsByPerson[person] > maxH) {
+          maxH = totalsByPerson[person];
+          topPerson = `${person} (${maxH} год)`;
+        }
+      });
+      document.getElementById('stat-top-contributor').textContent = topPerson;
+    }
+
+    // Delete Single Log
+    function deleteLog(logId) {
+      logs = logs.filter(l => l.id !== logId);
+      saveData();
+      renderLogs();
+      showToast('Запис видалено');
+    }
+
+    // Update Team Overview in Sidebar
+    function updateTeamOverview() {
+      const getHoursForPerson = (name) => {
+        return logs.filter(l => l.person === name).reduce((acc, curr) => acc + curr.hours, 0);
+      };
+
+      document.getElementById('lead-hours-badge').textContent = `${getHoursForPerson('Микола')} год`;
+      document.getElementById('margo-hours-badge').textContent = `${getHoursForPerson('Марго')} год`;
+      document.getElementById('dasha-hours-badge').textContent = `${getHoursForPerson('Даша')} год`;
+    }
+
+    // Project Modal Management
+    function openAddProjectModal() {
+      document.getElementById('add-project-modal').classList.remove('hidden');
+      document.getElementById('new-project-name').focus();
+    }
+
+    function closeAddProjectModal() {
+      document.getElementById('add-project-modal').classList.add('hidden');
+      document.getElementById('new-project-name').value = '';
+    }
+
+    function saveNewProject() {
+      const nameInput = document.getElementById('new-project-name').value.trim();
+      if (!nameInput) return;
+
+      const newProj = {
+        id: 'proj-' + Date.now(),
+        name: nameInput
+      };
+
+      projects.push(newProj);
+      activeProjectId = newProj.id;
+      saveData();
+      renderProjects();
+      renderLogs();
+      closeAddProjectModal();
+      showToast(`Проєкт "${nameInput}" успішно створено!`);
+    }
+
+    function deleteProject(projId) {
+      if (projects.length <= 1) return;
+      projects = projects.filter(p => p.id !== projId);
+      logs = logs.filter(l => l.projectId !== projId);
+      if (activeProjectId === projId) {
+        activeProjectId = projects[0].id;
+      }
+      saveData();
+      renderProjects();
+      renderLogs();
+      showToast('Проєкт видалено');
+    }
+
+    function clearAllData() {
+      if (confirm('Ви дійсно хочете очистити всі записи та повернути початковий стан?')) {
+        localStorage.removeItem('mac_tracker_projects');
+        localStorage.removeItem('mac_tracker_logs');
+        projects = DEFAULT_PROJECTS;
+        logs = [];
+        activeProjectId = projects[0].id;
+        saveData();
+        renderProjects();
+        renderLogs();
+        showToast('Всі дані скинуто!');
+      }
+    }
+
+    // Toast Utility
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = message;
+
+      toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 3000);
+    }
+
+    // Utility: Escape HTML
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+  </script>
+</body>
+</html>
